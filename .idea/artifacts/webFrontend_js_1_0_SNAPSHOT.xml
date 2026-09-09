@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="webFrontend-js-1.0-SNAPSHOT">
+    <output-path>$PROJECT_DIR$/webFrontend/build/libs</output-path>
+    <root id="archive" name="webFrontend-js-1.0-SNAPSHOT.jar">
+      <element id="module-output" name="corvirc.webFrontend.jsMain" />
+    </root>
+  </artifact>
+</component>
