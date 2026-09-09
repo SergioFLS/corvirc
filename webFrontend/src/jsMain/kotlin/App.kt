@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 SergOneZero
+// SPDX-License-Identifier: MIT-0 OR Apache-2.0
+
 import invalid.sergonezero.corvirc.Graphics
 import kotlinx.browser.document
 import org.w3c.dom.CanvasRenderingContext2D

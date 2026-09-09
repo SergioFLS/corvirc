@@ -1,0 +1,16 @@
+version = 1
+
+[[annotations]]
+path = ".idea/*"
+SPDX-FileCopyrightText = "NONE"
+SPDX-License-Identifier = "CC0-1.0"
+
+[[annotations]]
+path = "gradlew"
+SPDX-FileCopyrightText = "2015-2021 the original authors."
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = "gradlew.bat"
+SPDX-FileCopyrightText = "2015 the original author or authors."
+SPDX-License-Identifier = "Apache-2.0"

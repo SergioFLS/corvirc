@@ -1,5 +1,9 @@
 [versions]
 kotlin = "2.4.10"
+kotlinx-io = "0.9.1"
+
+[libraries]
+kotlinx-io-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-io-core", version.ref = "kotlinx-io" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
