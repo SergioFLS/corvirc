@@ -27,10 +27,21 @@ const val SCREEN_WIDTH = 640
 const val SCREEN_HEIGHT = 360
 private const val TEXTURE_SIZE = 1024
 
-class Graphics {
+class Graphics : SlaveDevice {
     val drawBuffer: IntArray = IntArray(SCREEN_WIDTH * SCREEN_HEIGHT) // in ABGR format
     val texture = IntArray(TEXTURE_SIZE * TEXTURE_SIZE)
+
     var clearColor: Int = 0xFF000000.toInt()
+    var selectedTexture: Int = 0
+    var selectedRegion: Int = 0
+    var drawingPointX: Int = 0
+    var drawingPointY: Int = 0
+    var regionMinX: Int = 0
+    var regionMinY: Int = 0
+    var regionMaxX: Int = 0
+    var regionMaxY: Int = 0
+    var regionHotspotX: Int = 0
+    var regionHotspotY: Int = 0
 
     fun getTexturePixel(x: Int, y: Int): Int? {
         if (x !in 0..<TEXTURE_SIZE) return null
@@ -74,13 +85,41 @@ class Graphics {
         }
     }
 
-    fun drawTexture() {
-        for (y in 0 until TEXTURE_SIZE) {
-            for (x in 0 until TEXTURE_SIZE) {
+    fun drawRegion() {
+        for (y in regionMinY .. regionMaxY) {
+            for (x in regionMinX .. regionMaxX) {
                 val pixel = getTexturePixel(x, y) ?: 0
                 if (pixel == 0) continue
-                putPixel(x + 10, y + 10, pixel)
+                putPixel(x + drawingPointX - regionHotspotX, y + drawingPointY - regionHotspotY, pixel)
             }
+        }
+    }
+
+    override fun read(address: Int): Int {
+        TODO("Not yet implemented")
+    }
+
+    override fun write(address: Int, value: Int) {
+        when (address) {
+            0x00 -> {
+                when (value) {
+                    0x10 -> clear()
+                    0x11 -> drawRegion()
+                    else -> TODO("Unsupported command: $value")
+                }
+            }
+            0x02 -> clearColor = value
+            0x05 -> selectedTexture = value
+            0x06 -> selectedRegion = value
+            0x07 -> drawingPointX = value
+            0x08 -> drawingPointY = value
+            0x0C -> regionMinX = value
+            0x0D -> regionMinY = value
+            0x0E -> regionMaxX = value
+            0x0F -> regionMaxY = value
+            0x10 -> regionHotspotX = value
+            0x11 -> regionHotspotY = value
+            else -> TODO("Unsupported address: $address")
         }
     }
 }

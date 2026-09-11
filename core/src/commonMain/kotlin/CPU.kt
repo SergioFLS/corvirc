@@ -110,7 +110,8 @@ data class Instruction(
 const val STACK_POINTER = 15
 
 class CPU(
-    val program: IntArray
+    val program: IntArray,
+    val gpu: Graphics
 ) {
     var instructionPointer: Int = 0x20000000
     var instructionRegister: Int = 0
@@ -203,6 +204,7 @@ class CPU(
             Opcode.OUTPUT -> {
                 val value = immediateValue ?: registers[instruction.r1]
                 println("OUT stub: portNumber = ${instruction.portAddress} value = $value")
+                output(instruction.portAddress, value)
             }
             Opcode.INT_ADD -> registers[instruction.r1] += immediateValue ?: registers[instruction.r2]
             Opcode.INT_SUBTRACT -> registers[instruction.r1] -= immediateValue ?: registers[instruction.r2]
@@ -210,6 +212,23 @@ class CPU(
             else -> {
                 throw RuntimeException("Unimplemented opcode ${instruction.opcode.name}")
             }
+        }
+    }
+
+    /** Write to a slave device. */
+    private fun output(address: Int, value: Int) {
+        /*
+        0b###_III_AAAAAAAA
+        #: unused
+        I: device ID
+        A: device local address
+         */
+
+        val localAddress = address and 0xFF
+        when (val deviceID = (address shr 8) and 0b111) {
+            2 -> gpu.write(localAddress, value)
+            3 -> println("SPU write stub")
+            else -> TODO("Not yet implemented: $deviceID")
         }
     }
 

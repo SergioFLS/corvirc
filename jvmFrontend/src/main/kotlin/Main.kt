@@ -32,7 +32,7 @@ fun main() {
         for (i in program.indices) {
             program[i] = it.readIntLe()
         }
-        cpu = CPU(program)
+        cpu = CPU(program, g)
 
         //it.skip(0x314 - 0x80)
         require(it.readByteString(8).decodeToString() == "V32-VTEX")
@@ -49,14 +49,14 @@ fun main() {
     cpu.runUntilHalt()
     println(cpu)
 
-    g.clearColor = 0xFFFF00FF.toInt()
-    g.clear()
-    g.setPixel(0, 0, 0xFFFFFFFF.toInt())
-    g.setPixel(1, 0, 0xFFFFFFFF.toInt())
-    g.setPixel(2, 0, 0xFFFFFFFF.toInt())
-    g.setPixel(2, 1, 0xFFFFFFFF.toInt())
-    g.setPixel(2, 2, 0xFFFFFFFF.toInt())
-    g.drawTexture()
+//    g.clearColor = 0xFFFF00FF.toInt()
+//    g.clear()
+//    g.setPixel(0, 0, 0xFFFFFFFF.toInt())
+//    g.setPixel(1, 0, 0xFFFFFFFF.toInt())
+//    g.setPixel(2, 0, 0xFFFFFFFF.toInt())
+//    g.setPixel(2, 1, 0xFFFFFFFF.toInt())
+//    g.setPixel(2, 2, 0xFFFFFFFF.toInt())
+//    g.drawTexture()
 
     val image = BufferedImage(SCREEN_WIDTH, SCREEN_HEIGHT, BufferedImage.TYPE_INT_ARGB)
 
