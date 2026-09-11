@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2026 SergOneZero
 // SPDX-License-Identifier: MIT-0 OR Apache-2.0
+import invalid.sergonezero.corvirc.CPU
 import invalid.sergonezero.corvirc.Graphics
 import invalid.sergonezero.corvirc.SCREEN_HEIGHT
 import invalid.sergonezero.corvirc.SCREEN_WIDTH
@@ -22,8 +23,18 @@ fun main() {
     // TODO is there a way to read directly from JAR instead of this repo?
     val testTxt = Path("jvmFrontend/src/main/resources/Test - Minimal test.v32")
     val g = Graphics()
+    val cpu: CPU
     SystemFileSystem.source(testTxt).buffered().use {
-        it.skip(0x314)
+        it.skip(0x80)
+        require(it.readByteString(8).decodeToString() == "V32-VBIN")
+        val wordSize = it.readIntLe()
+        val program = IntArray(wordSize)
+        for (i in program.indices) {
+            program[i] = it.readIntLe()
+        }
+        cpu = CPU(program)
+
+        //it.skip(0x314 - 0x80)
         require(it.readByteString(8).decodeToString() == "V32-VTEX")
         val textureWidth = it.readUIntLe()
         val textureHeight = it.readUIntLe()
@@ -35,8 +46,10 @@ fun main() {
         }
     }
 
+    cpu.runUntilHalt()
+    println(cpu)
 
-    g.clearColor = 0xFF0000FF.toInt()
+    g.clearColor = 0xFFFF00FF.toInt()
     g.clear()
     g.setPixel(0, 0, 0xFFFFFFFF.toInt())
     g.setPixel(1, 0, 0xFFFFFFFF.toInt())

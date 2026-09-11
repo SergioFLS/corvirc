@@ -2,11 +2,15 @@
 // SPDX-License-Identifier: MIT-0 OR Apache-2.0
 
 import invalid.sergonezero.corvirc.Graphics
+import invalid.sergonezero.corvirc.CPU
 import kotlinx.browser.document
 import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.HTMLCanvasElement
 
 fun main() {
+    val cpu = CPU(IntArray(3))
+    cpu.program[0] = 0x0E000000
+    cpu.step()
     val g = Graphics()
 
     g.clearColor = 0xFF0000FF.toInt()
