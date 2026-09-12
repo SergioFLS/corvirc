@@ -4,10 +4,9 @@ import invalid.sergonezero.corvirc.CPU
 import invalid.sergonezero.corvirc.Graphics
 import invalid.sergonezero.corvirc.SCREEN_HEIGHT
 import invalid.sergonezero.corvirc.SCREEN_WIDTH
+import kotlinx.io.asSource
 import kotlinx.io.buffered
 import kotlinx.io.bytestring.decodeToString
-import kotlinx.io.files.Path
-import kotlinx.io.files.SystemFileSystem
 import kotlinx.io.readByteString
 import kotlinx.io.readIntLe
 import kotlinx.io.readUIntLe
@@ -15,16 +14,23 @@ import java.awt.Dimension
 import java.awt.Graphics2D
 import java.awt.Image
 import java.awt.image.BufferedImage
+import java.io.InputStream
 import javax.swing.JComponent
 import javax.swing.JFrame
 import javax.swing.WindowConstants
 
+// exists only to use getResourceAsStream
+object Dummy {
+    fun getResourceAsStream(name: String): InputStream? {
+        return javaClass.getResourceAsStream(name)
+    }
+}
+
 fun main() {
-    // TODO is there a way to read directly from JAR instead of this repo?
-    val testTxt = Path("jvmFrontend/src/main/resources/Test - Minimal test.v32")
+    val cartV32 = Dummy.getResourceAsStream("/Test - Minimal test.v32")!!
     val g = Graphics()
     val cpu: CPU
-    SystemFileSystem.source(testTxt).buffered().use {
+    cartV32.asSource().buffered().use {
         it.skip(0x80)
         require(it.readByteString(8).decodeToString() == "V32-VBIN")
         val wordSize = it.readIntLe()
