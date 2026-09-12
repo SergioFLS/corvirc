@@ -13,6 +13,7 @@ kotlin {
     sourceSets {
         jsMain.dependencies {
             implementation(project(":core"))
+            implementation(kotlinWrappers.web)
         }
     }
 }

@@ -3,23 +3,54 @@
 
 import invalid.sergonezero.corvirc.Graphics
 import invalid.sergonezero.corvirc.CPU
+import js.buffer.ArrayBuffer
+import js.buffer.DataView
 import kotlinx.browser.document
 import org.w3c.dom.CanvasRenderingContext2D
 import org.w3c.dom.HTMLCanvasElement
+import web.http.arrayBuffer
+import web.http.fetch
 
-fun main() {
-    val cpu = CPU(IntArray(3))
-    cpu.program[0] = 0x0E000000
-    cpu.step()
+fun getProgram(cart: DataView<ArrayBuffer>): IntArray {
+    val offset = cart.getInt32(0x60, true)
+
+    require(cart.getInt32(offset + 0, false) == 0x5633322D) // V32-
+    require(cart.getInt32(offset + 4, false) == 0x5642494E) // VBIN
+    val wordSize = cart.getInt32(offset + 8, true)
+    val program = IntArray(wordSize)
+    for (i in 0 until wordSize) {
+        program[i] = cart.getInt32(offset + 12 + (i * 4), true)
+    }
+    return program
+}
+
+fun loadTexture(gpu: Graphics, cart: DataView<ArrayBuffer>) {
+    val offset = cart.getInt32(0x68, true)
+
+    require(cart.getInt32(offset + 0, false) == 0x5633322D) // V32-
+    require(cart.getInt32(offset + 4, false) == 0x56544558) // VTEX
+
+    val textureWidth = cart.getInt32(offset + 8, true)
+    val textureHeight = cart.getInt32(offset + 12, true)
+    var dataOffset = offset + 16
+    for (y in 0 until textureHeight) {
+        for (x in 0 until textureWidth) {
+            gpu.setTexturePixel(x, y, cart.getInt32(dataOffset, true))
+            dataOffset += 4
+        }
+    }
+}
+
+suspend fun main() {
+    val cartRequest = fetch("/Test - Minimal test.v32")
+    check(cartRequest.ok)
+
+    val cartV32 = DataView(cartRequest.arrayBuffer())
     val g = Graphics()
-
-    g.clearColor = 0xFF0000FF.toInt()
-    g.clear()
-    g.setPixel(0, 0, 0xFFFFFFFF.toInt())
-    g.setPixel(1, 0, 0xFFFFFFFF.toInt())
-    g.setPixel(2, 0, 0xFFFFFFFF.toInt())
-    g.setPixel(2, 1, 0xFFFFFFFF.toInt())
-    g.setPixel(2, 2, 0xFFFFFFFF.toInt())
+    val cpu = CPU(getProgram(cartV32), g)
+    console.log(cpu.program)
+    loadTexture(g, cartV32)
+    cpu.runUntilHalt()
 
     val myCanvas = document.getElementById("my-canvas")!! as HTMLCanvasElement
     val ctx = myCanvas.getContext("2d") as CanvasRenderingContext2D
