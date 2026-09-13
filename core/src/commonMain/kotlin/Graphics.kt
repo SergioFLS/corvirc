@@ -23,6 +23,16 @@ data class DecomposedPixel(
             )
 
 }
+
+data class Region(
+    var minX: Int = 0,
+    var minY: Int = 0,
+    var maxX: Int = 0,
+    var maxY: Int = 0,
+    var hotspotX: Int = 0,
+    var hotspotY: Int = 0
+)
+
 const val SCREEN_WIDTH = 640
 const val SCREEN_HEIGHT = 360
 private const val TEXTURE_SIZE = 1024
@@ -33,18 +43,32 @@ class Graphics : SlaveDevice {
 
     var clearColor: Int = 0xFF000000.toInt()
     var multiplyColor: Int = 0xFFFFFFFF.toInt()
-    var selectedTexture: Int = 0
+    var selectedTexture: Int = -1
     var selectedRegion: Int = 0
     var drawingPointX: Int = 0
     var drawingPointY: Int = 0
     var drawingScaleX: Int = 0 // TODO use
     var drawingScaleY: Int = 0 // TODO use
-    var regionMinX: Int = 0
-    var regionMinY: Int = 0
-    var regionMaxX: Int = 0
-    var regionMaxY: Int = 0
-    var regionHotspotX: Int = 0
-    var regionHotspotY: Int = 0
+
+    val regions = Array(4096) { Region() }
+    var regionMinX: Int
+        get() = regions[selectedRegion].minX
+        set(value) { regions[selectedRegion].minX = value }
+    var regionMinY: Int
+        get() = regions[selectedRegion].minY
+        set(value) { regions[selectedRegion].minY = value }
+    var regionMaxX: Int
+        get() = regions[selectedRegion].maxX
+        set(value) { regions[selectedRegion].maxX = value }
+    var regionMaxY: Int
+        get() = regions[selectedRegion].maxY
+        set(value) { regions[selectedRegion].maxY = value }
+    var regionHotspotX: Int
+        get() = regions[selectedRegion].hotspotX
+        set(value) { regions[selectedRegion].hotspotX = value }
+    var regionHotspotY: Int
+        get() = regions[selectedRegion].hotspotY
+        set(value) { regions[selectedRegion].hotspotY = value }
 
     fun getTexturePixel(x: Int, y: Int): Int? {
         if (x !in 0..<TEXTURE_SIZE) return null
