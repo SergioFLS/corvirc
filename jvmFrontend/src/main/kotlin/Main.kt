@@ -15,6 +15,7 @@ import java.awt.Graphics2D
 import java.awt.Image
 import java.awt.image.BufferedImage
 import java.io.InputStream
+import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JFrame
 import javax.swing.WindowConstants
@@ -27,7 +28,7 @@ object Dummy {
 }
 
 fun main() {
-    val cartV32 = Dummy.getResourceAsStream("/Test - Minimal test.v32")!!
+    val cartV32 = Dummy.getResourceAsStream("/StandardBios.v32")!!
     val g = Graphics()
     val cpu: CPU
     cartV32.asSource().buffered().use {
@@ -52,7 +53,14 @@ fun main() {
         }
     }
 
-    cpu.runUntilHalt()
+    fun runCPUFrame() {
+        cpu.runUntilHaltOrWait()
+        cpu.frame()
+    }
+
+    for (i in 1..250) {
+        runCPUFrame()
+    }
     println(cpu)
 
 //    g.clearColor = 0xFFFF00FF.toInt()
@@ -66,22 +74,38 @@ fun main() {
 
     val image = BufferedImage(SCREEN_WIDTH, SCREEN_HEIGHT, BufferedImage.TYPE_INT_ARGB)
 
-    for (y in 0 until SCREEN_HEIGHT) {
-        for (x in 0 until SCREEN_WIDTH) {
-            val pixelABGR = g.getPixel(x, y) ?: 0
-            val pixel = (
-                    (pixelABGR and 0xFF00FF00.toInt())
-                            or ((pixelABGR and 0x000000FF) shl 16)
-                            or ((pixelABGR and 0x00FF0000) shr 16))
-            image.setRGB(x, y, pixel)
+    fun updateScreenBuffer() {
+        for (y in 0 until SCREEN_HEIGHT) {
+            for (x in 0 until SCREEN_WIDTH) {
+                val pixelABGR = g.getPixel(x, y) ?: 0
+                val pixel = (
+                        (pixelABGR and 0xFF00FF00.toInt())
+                                or ((pixelABGR and 0x000000FF) shl 16)
+                                or ((pixelABGR and 0x00FF0000) shr 16))
+                image.setRGB(x, y, pixel)
+            }
         }
     }
+    updateScreenBuffer()
 
     val imageComponent = ImageComponent(image)
-    JFrame().apply {
+    imageComponent.setBounds(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
+    val jframe = JFrame()
+    val stepButton = JButton("step")
+    stepButton.setBounds(641, 10, 60, 20)
+    stepButton.addActionListener { _ ->
+        runCPUFrame()
+        updateScreenBuffer()
+        println(cpu.frameCounter)
+        jframe.repaint()
+    }
+
+    jframe.apply {
+        contentPane.layout = null
         defaultCloseOperation = WindowConstants.EXIT_ON_CLOSE
-        minimumSize = Dimension(SCREEN_WIDTH, SCREEN_HEIGHT)
+        minimumSize = Dimension(SCREEN_WIDTH + 70, SCREEN_HEIGHT)
         add(imageComponent)
+        add(stepButton)
         isVisible = true
     }
 }

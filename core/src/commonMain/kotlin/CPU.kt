@@ -50,7 +50,7 @@ enum class Opcode(val op: Int) {
     // Integer arithmetic
     INT_ADD(38),
     INT_SUBTRACT(39),
-    INT_MULIPLY(40),
+    INT_MULTIPLY(40),
     INT_DIVIDE(41),
     INT_MODULUS(42),
     INT_SIGN(43),
@@ -106,6 +106,8 @@ data class Instruction(
         (instruction and 0x1C000) shr 14,
         instruction and 0x3FFF
     )
+
+    fun immediateOr(immediateValue: Int, otherValue: Int): Int = if (isImmediate) immediateValue else otherValue
 }
 const val STACK_POINTER = 15
 
@@ -115,15 +117,20 @@ class CPU(
 ) {
     var instructionPointer: Int = 0x20000000
     var instructionRegister: Int = 0
-    val immediateValue: Int = 0
+    var immediateValue: Int = 0
     val registers = IntArray(16)
     val memory = IntArray(0x10000000)
     var isHalted = false
+    var isWaiting = false
+
+    var frameCounter = 0 // TODO move this to a dedicated timer class
 
     fun reset() {
         registers.fill(0)
         registers[STACK_POINTER] = 0xfffffff
+        instructionPointer = 0x10000004
         isHalted = false
+        isWaiting = false
     }
 
     init {
@@ -136,7 +143,8 @@ class CPU(
 
         return when (addr and 0x30000000) {
             0 -> memory[addr]
-            0x20000000 -> program[addr - 0x20000000]
+            0x10000000 -> program[addr - 0x10000000]
+            //0x20000000 -> program[addr - 0x20000000]
             else -> TODO("unfinished memory map")
         }
     }
@@ -163,35 +171,51 @@ class CPU(
         return output
     }
 
-    fun step() {
-        if (isHalted) return
+    fun frame() {
+        frameCounter++
+        isWaiting = false
+    }
+
+    fun cycle() {
+        if (isHalted || isWaiting) return
         instructionRegister = read(instructionPointer)
         instructionPointer++
         val instruction = Instruction(instructionRegister)
         println("$instruction @ ${instructionPointer.toHexString()}")
 
-        val immediateValue: Int?
         if (instruction.isImmediate) {
             immediateValue = read(instructionPointer)
             instructionPointer++
-        } else immediateValue = null
+        }
         when (instruction.opcode) {
             Opcode.HALT -> isHalted = true
+            Opcode.WAIT -> isWaiting = true
             Opcode.CALL -> {
                 push(instructionPointer)
-                instructionPointer = immediateValue ?: registers[instruction.r1]
+                instructionPointer = instruction.immediateOr(immediateValue, registers[instruction.r1])
             }
-            Opcode.RETURN -> {
-                instructionPointer = pop()
-            }
+            Opcode.JUMP -> instructionPointer = instruction.immediateOr(
+                immediateValue,
+                registers[instruction.r1]
+            )
+            Opcode.JUMP_FALSE -> if (registers[instruction.r1] == 0)
+                instructionPointer = instruction.immediateOr(
+                    immediateValue,
+                    registers[instruction.r2]
+                )
+            Opcode.INT_EQUAL -> registers[instruction.r1] = if (registers[instruction.r1] == instruction.immediateOr(immediateValue, registers[instruction.r2])) 1 else 0
+            Opcode.RETURN -> instructionPointer = pop()
+            Opcode.INT_GREATER_OR_EQUAL -> registers[instruction.r1] = if (registers[instruction.r1] >= instruction.immediateOr(immediateValue, registers[instruction.r2])) 1 else 0
+            Opcode.INT_LESS -> registers[instruction.r1] = if (registers[instruction.r1] < instruction.immediateOr(immediateValue, registers[instruction.r2])) 1 else 0
             Opcode.MOVE -> {
                 when (instruction.addressingMode) {
-                    0 -> registers[instruction.r1] = immediateValue!!
+                    0 -> registers[instruction.r1] = immediateValue
                     1 -> registers[instruction.r1] = registers[instruction.r2]
-                    4 -> registers[instruction.r1] = read(registers[instruction.r2] + immediateValue!!)
-                    5 -> write(immediateValue!!, registers[instruction.r2])
+                    3 -> registers[instruction.r1] = read(registers[instruction.r2])
+                    4 -> registers[instruction.r1] = read(registers[instruction.r2] + immediateValue)
+                    5 -> write(immediateValue, registers[instruction.r2])
                     6 -> write(registers[instruction.r1], registers[instruction.r2])
-                    7 -> write(registers[instruction.r1] + immediateValue!!, registers[instruction.r2])
+                    7 -> write(registers[instruction.r1] + immediateValue, registers[instruction.r2])
                     else -> check(false) { "Unreachable code" }
                 }
             }
@@ -201,17 +225,56 @@ class CPU(
             Opcode.POP -> {
                 registers[instruction.r1] = pop()
             }
+            Opcode.INPUT -> {
+                registers[instruction.r1] = input(instruction.portAddress)
+                println("IN stub: portNumber = ${instruction.portAddress}")
+            }
             Opcode.OUTPUT -> {
-                val value = immediateValue ?: registers[instruction.r1]
+                val value = instruction.immediateOr(immediateValue, registers[instruction.r1])
                 println("OUT stub: portNumber = ${instruction.portAddress} value = $value")
                 output(instruction.portAddress, value)
             }
-            Opcode.INT_ADD -> registers[instruction.r1] += immediateValue ?: registers[instruction.r2]
-            Opcode.INT_SUBTRACT -> registers[instruction.r1] -= immediateValue ?: registers[instruction.r2]
-            Opcode.INT_DIVIDE -> registers[instruction.r1] /= immediateValue ?: registers[instruction.r2]
+            Opcode.CONVERT_INT_FLOAT -> registers[instruction.r1] = registers[instruction.r1].toFloat().toRawBits()
+            Opcode.CONVERT_FLOAT_INT -> registers[instruction.r1] = Float.fromBits(registers[instruction.r1]).toInt()
+            Opcode.CONVERT_INT_BOOLEAN -> if (registers[instruction.r1] != 0) registers[instruction.r1] = 1
+            Opcode.OR -> registers[instruction.r1] = registers[instruction.r1] or instruction.immediateOr(immediateValue, registers[instruction.r2])
+            Opcode.BOOLEAN_NOT -> registers[instruction.r1] = if (registers[instruction.r1] == 0) 1 else 0
+            Opcode.SHIFT_LEFT -> registers[instruction.r1] = registers[instruction.r1] shl instruction.immediateOr(immediateValue, registers[instruction.r2])
+            Opcode.INT_ADD -> registers[instruction.r1] += instruction.immediateOr(immediateValue, registers[instruction.r2])
+            Opcode.INT_SUBTRACT -> registers[instruction.r1] -= instruction.immediateOr(immediateValue, registers[instruction.r2])
+            Opcode.INT_MULTIPLY -> registers[instruction.r1] *= instruction.immediateOr(immediateValue, registers[instruction.r2])
+            Opcode.INT_DIVIDE -> registers[instruction.r1] /= instruction.immediateOr(immediateValue, registers[instruction.r2])
+            Opcode.INT_SIGN -> registers[instruction.r1] = -registers[instruction.r1]
+            Opcode.FLOAT_ADD -> registers[instruction.r1] = (
+                Float.fromBits(registers[instruction.r1]) + Float.fromBits(instruction.immediateOr(immediateValue, registers[instruction.r2]))
+            ).toRawBits()
+            Opcode.FLOAT_MULTIPLY -> registers[instruction.r1] = (
+                Float.fromBits(registers[instruction.r1]) * Float.fromBits(instruction.immediateOr(immediateValue, registers[instruction.r2]))
+            ).toRawBits()
+            Opcode.FLOAT_SIGN -> registers[instruction.r1] = registers[instruction.r1] xor 0x80000000.toInt()
             else -> {
                 throw RuntimeException("Unimplemented opcode ${instruction.opcode.name}")
             }
+        }
+    }
+
+    private fun input(address: Int): Int {
+        val localAddress = address and 0xFF
+        return when (val deviceID = (address shr 8) and 0b111) {
+            0 -> {
+                println("Timer read stub")
+                if (localAddress == 2) frameCounter else 0 // TODO timer
+            }
+            2 -> gpu.read(localAddress)
+            3 -> {
+                println("SPU read stub")
+                0
+            }
+            5 -> {
+                println("Cartridge read stub")
+                0
+            }
+            else -> TODO("Input not yet implemented: $deviceID")
         }
     }
 
@@ -228,12 +291,12 @@ class CPU(
         when (val deviceID = (address shr 8) and 0b111) {
             2 -> gpu.write(localAddress, value)
             3 -> println("SPU write stub")
-            else -> TODO("Not yet implemented: $deviceID")
+            else -> TODO("Output not yet implemented: $deviceID")
         }
     }
 
-    fun runUntilHalt() {
-        while (!isHalted) step()
+    fun runUntilHaltOrWait() {
+        while (!(isHalted || isWaiting)) cycle()
     }
 
     override fun toString(): String {

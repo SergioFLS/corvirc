@@ -32,10 +32,13 @@ class Graphics : SlaveDevice {
     val texture = IntArray(TEXTURE_SIZE * TEXTURE_SIZE)
 
     var clearColor: Int = 0xFF000000.toInt()
+    var multiplyColor: Int = 0xFFFFFFFF.toInt()
     var selectedTexture: Int = 0
     var selectedRegion: Int = 0
     var drawingPointX: Int = 0
     var drawingPointY: Int = 0
+    var drawingScaleX: Int = 0 // TODO use
+    var drawingScaleY: Int = 0 // TODO use
     var regionMinX: Int = 0
     var regionMinY: Int = 0
     var regionMaxX: Int = 0
@@ -96,7 +99,21 @@ class Graphics : SlaveDevice {
     }
 
     override fun read(address: Int): Int {
-        TODO("Not yet implemented")
+        return when (address) {
+            0x02 -> clearColor
+            0x03 -> multiplyColor
+            0x05 -> selectedTexture
+            0x06 -> selectedRegion
+            0x07 -> drawingPointX
+            0x08 -> drawingPointY
+            0x0C -> regionMinX
+            0x0D -> regionMinY
+            0x0E -> regionMaxX
+            0x0F -> regionMaxY
+            0x10 -> regionHotspotX
+            0x11 -> regionHotspotY
+            else -> TODO("Unsupported read address: $address")
+        }
     }
 
     override fun write(address: Int, value: Int) {
@@ -105,21 +122,36 @@ class Graphics : SlaveDevice {
                 when (value) {
                     0x10 -> clear()
                     0x11 -> drawRegion()
+                    0x12 -> {
+                        println("draw region zoomed stub") // TODO
+                        drawRegion()
+                    }
+                    0x13 -> {
+                        println("draw region rotated stub") // TODO
+                        drawRegion()
+                    }
+                    0x14 -> {
+                        println("draw region rotozoomed stub") // TODO
+                        drawRegion()
+                    }
                     else -> TODO("Unsupported command: $value")
                 }
             }
             0x02 -> clearColor = value
+            0x03 -> multiplyColor = value
             0x05 -> selectedTexture = value
             0x06 -> selectedRegion = value
             0x07 -> drawingPointX = value
             0x08 -> drawingPointY = value
+            0x09 -> drawingScaleX = value
+            0x0A -> drawingScaleY = value
             0x0C -> regionMinX = value
             0x0D -> regionMinY = value
             0x0E -> regionMaxX = value
             0x0F -> regionMaxY = value
             0x10 -> regionHotspotX = value
             0x11 -> regionHotspotY = value
-            else -> TODO("Unsupported address: $address")
+            else -> TODO("Unsupported write address: $address")
         }
     }
 }

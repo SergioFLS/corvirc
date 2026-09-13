@@ -50,7 +50,7 @@ suspend fun main() {
     val cpu = CPU(getProgram(cartV32), g)
     console.log(cpu.program)
     loadTexture(g, cartV32)
-    cpu.runUntilHalt()
+    cpu.runUntilHaltOrWait()
 
     val myCanvas = document.getElementById("my-canvas")!! as HTMLCanvasElement
     val ctx = myCanvas.getContext("2d") as CanvasRenderingContext2D
