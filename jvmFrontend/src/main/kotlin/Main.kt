@@ -24,7 +24,7 @@ object Dummy {
 
 fun main() {
     val bios = Cartridge(Dummy.getResourceAsStream("/StandardBios.v32")!!.readBytes())
-    val cart = Cartridge()
+    val cart = Cartridge(Dummy.getResourceAsStream("/Test - Minimal test.v32")!!.readBytes())
 
     val g = Graphics(bios.textures!![0], cart)
     val cpu = CPU(bios, cart, g)
@@ -34,19 +34,10 @@ fun main() {
         cpu.frame()
     }
 
-    for (i in 1..250) {
+    repeat(30) {
         runCPUFrame()
     }
     println(cpu)
-
-//    g.clearColor = 0xFFFF00FF.toInt()
-//    g.clear()
-//    g.setPixel(0, 0, 0xFFFFFFFF.toInt())
-//    g.setPixel(1, 0, 0xFFFFFFFF.toInt())
-//    g.setPixel(2, 0, 0xFFFFFFFF.toInt())
-//    g.setPixel(2, 1, 0xFFFFFFFF.toInt())
-//    g.setPixel(2, 2, 0xFFFFFFFF.toInt())
-//    g.drawTexture()
 
     val image = BufferedImage(SCREEN_WIDTH, SCREEN_HEIGHT, BufferedImage.TYPE_INT_ARGB)
 

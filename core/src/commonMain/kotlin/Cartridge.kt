@@ -1,8 +1,6 @@
 package invalid.sergonezero.corvirc
 
 import kotlinx.io.Buffer
-import kotlinx.io.RawSource
-import kotlinx.io.Source
 import kotlinx.io.bytestring.decodeToString
 import kotlinx.io.readByteString
 import kotlinx.io.readIntLe
@@ -16,7 +14,7 @@ class Cartridge(
     var program: IntArray? = null,
     var textures: Array<Texture>? = null
 ) : MemoryDevice, ControlDevice {
-    val initialized: Boolean
+    val isInitialized: Boolean
         get() = program != null
 
     constructor(program: IntArray, textures: Array<Texture>) : this() {
@@ -77,7 +75,7 @@ class Cartridge(
     }
     override fun memoryRead(address: Int): Int {
         val v = program!![address]
-        println("memoryRead: $address = $v on ${toString()}")
+        //println("memoryRead: $address = $v on ${toString()}")
         return v
     }
 
@@ -86,7 +84,10 @@ class Cartridge(
     }
 
     override fun controlRead(address: Int): Int {
-        TODO("Not yet implemented")
+        return when (address) {
+            0 -> if (isInitialized) 1 else 0
+            else -> TODO("Not yet implemented")
+        }
     }
 
     override fun controlWrite(address: Int, value: Int) {

@@ -182,7 +182,7 @@ class CPU(
         instructionRegister = read(instructionPointer)
         instructionPointer++
         val instruction = Instruction(instructionRegister)
-        println("$instruction @ ${instructionPointer.toHexString()}")
+        //println("$instruction @ ${instructionPointer.toHexString()}")
 
         if (instruction.isImmediate) {
             immediateValue = read(instructionPointer)

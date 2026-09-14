@@ -42,7 +42,7 @@ class Graphics(val biosTexture: Texture, val cartridge: Cartridge) : ControlDevi
     var clearColor: Int = 0xFF000000.toInt()
     var multiplyColor: Int = 0xFFFFFFFF.toInt()
     var selectedTexture: Int = -1
-        set(value) { field = if (cartridge.initialized) value else -1 }
+        set(value) { field = if (cartridge.isInitialized) value else -1 }
     val texture: Texture
         get() = if (selectedTexture <= -1) biosTexture else cartridge.textures!![selectedTexture]
     var selectedRegion: Int = 0
