@@ -4,6 +4,7 @@
 import invalid.sergonezero.corvirc.Graphics
 import invalid.sergonezero.corvirc.CPU
 import invalid.sergonezero.corvirc.Cartridge
+import js.date.Date
 import kotlinx.browser.document
 import kotlinx.browser.window
 import org.w3c.dom.CanvasRenderingContext2D
@@ -37,19 +38,23 @@ suspend fun main() {
     val myImageData = ctx.createImageData(640.0, 360.0)
 
     fun runCPUFrame() {
+        val start = Date.now()
         cpu.runUntilHaltOrWait()
-        cpu.frame()
+        console.log("Run finished in ${Date.now() - start} ms")
+        if (g.screenUpdated) {
+            for (i in 0 until myImageData.data.length / 4) {
+                // https://youtrack.jetbrains.com/issue/KT-24583
+                myImageData.data.asDynamic()[i * 4    ] = (g.drawBuffer[i] and 0xFF)
+                myImageData.data.asDynamic()[i * 4 + 1] = (g.drawBuffer[i] shr 8) and 0xFF
+                myImageData.data.asDynamic()[i * 4 + 2] = (g.drawBuffer[i] shr 16) and 0xFF
+                myImageData.data.asDynamic()[i * 4 + 3] = (g.drawBuffer[i] shr 24) and 0xFF
+            }
 
-        for (i in 0 until myImageData.data.length / 4) {
-            // https://youtrack.jetbrains.com/issue/KT-24583
-            val data = myImageData.data.asDynamic()
-            data[i * 4 + 0] = (g.drawBuffer[i] and 0x000000FF)
-            data[i * 4 + 1] = (g.drawBuffer[i] and 0x0000FF00) shr 8
-            data[i * 4 + 2] = (g.drawBuffer[i] and 0x00FF0000) shr 16
-            data[i * 4 + 3] = (g.drawBuffer[i].toLong() and 0xFF000000) shr 24
+            ctx.putImageData(myImageData, 0.0, 0.0)
         }
 
-        ctx.putImageData(myImageData, 0.0, 0.0)
+        cpu.frame()
+        console.log("Frame finished in ${Date.now() - start} ms")
     }
 
     window.setInterval({ runCPUFrame() }, 1000/60)

@@ -328,6 +328,7 @@ class CPU(
     }
 
     fun runUntilHaltOrWait() {
+        gpu.screenUpdated = false
         while (!(isHalted || isWaiting)) cycle()
     }
 

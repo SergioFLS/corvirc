@@ -37,6 +37,7 @@ const val SCREEN_WIDTH = 640
 const val SCREEN_HEIGHT = 360
 
 class Graphics(val biosTexture: Texture, val cartridge: Cartridge) : ControlDevice {
+    var screenUpdated: Boolean = false
     val drawBuffer: IntArray = IntArray(SCREEN_WIDTH * SCREEN_HEIGHT) // in ABGR format
 
     var clearColor: Int = 0xFF000000.toInt()
@@ -89,6 +90,12 @@ class Graphics(val biosTexture: Texture, val cartridge: Cartridge) : ControlDevi
         val currentPixel = DecomposedPixel(getPixel(x, y) ?: 0)
         val inPixel = DecomposedPixel(color)
 
+        if (inPixel.alpha == 0) return
+        if (inPixel.alpha == 255) {
+            setPixel(x, y, color)
+            return
+        }
+
         setPixel(x, y, DecomposedPixel(
             (inPixel.red * inPixel.alpha + currentPixel.red * (255 - inPixel.alpha)) / 255,
             (inPixel.green * inPixel.alpha + currentPixel.green * (255 - inPixel.alpha)) / 255,
@@ -135,6 +142,7 @@ class Graphics(val biosTexture: Texture, val cartridge: Cartridge) : ControlDevi
     override fun controlWrite(address: Int, value: Int) {
         when (address) {
             0x00 -> {
+                screenUpdated = true
                 when (value) {
                     0x10 -> clear()
                     0x11 -> drawRegion()
