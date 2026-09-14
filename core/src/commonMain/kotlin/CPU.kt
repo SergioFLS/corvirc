@@ -1,5 +1,8 @@
 package invalid.sergonezero.corvirc
 
+import kotlin.math.absoluteValue
+import kotlin.math.max
+
 enum class Opcode(val op: Int) {
     // CPU control
     HALT(0),
@@ -109,12 +112,17 @@ data class Instruction(
 
     fun immediateOr(immediateValue: Int, otherValue: Int): Int = if (isImmediate) immediateValue else otherValue
 }
+const val COUNTER_REGISTER = 11
+const val SOURCE_REGISTER = 12
+const val DESTINATION_REGISTER = 13
+const val BASE_POINTER = 14
 const val STACK_POINTER = 15
 
 class CPU(
     val bios: Cartridge,
     val cartridge: Cartridge,
-    val gpu: Graphics
+    val gpu: Graphics,
+    val rng: RNG = RNG()
 ) {
     var instructionPointer: Int = 0x20000000
     var instructionRegister: Int = 0
@@ -199,6 +207,11 @@ class CPU(
                 immediateValue,
                 registers[instruction.r1]
             )
+            Opcode.JUMP_TRUE -> if (registers[instruction.r1] != 0)
+                instructionPointer = instruction.immediateOr(
+                    immediateValue,
+                    registers[instruction.r2]
+                )
             Opcode.JUMP_FALSE -> if (registers[instruction.r1] == 0)
                 instructionPointer = instruction.immediateOr(
                     immediateValue,
@@ -212,6 +225,7 @@ class CPU(
                 when (instruction.addressingMode) {
                     0 -> registers[instruction.r1] = immediateValue
                     1 -> registers[instruction.r1] = registers[instruction.r2]
+                    2 -> registers[instruction.r1] = read(immediateValue)
                     3 -> registers[instruction.r1] = read(registers[instruction.r2])
                     4 -> registers[instruction.r1] = read(registers[instruction.r2] + immediateValue)
                     5 -> write(immediateValue, registers[instruction.r2])
@@ -235,6 +249,13 @@ class CPU(
                 println("OUT stub: portNumber = ${instruction.portAddress} value = $value")
                 output(instruction.portAddress, value)
             }
+            Opcode.MOVE_STRING -> {
+                write(registers[DESTINATION_REGISTER], read(registers[SOURCE_REGISTER]))
+                registers[DESTINATION_REGISTER]++
+                registers[SOURCE_REGISTER]++
+                registers[COUNTER_REGISTER]--
+                if (registers[COUNTER_REGISTER] > 0) instructionPointer--
+            }
             Opcode.CONVERT_INT_FLOAT -> registers[instruction.r1] = registers[instruction.r1].toFloat().toRawBits()
             Opcode.CONVERT_FLOAT_INT -> registers[instruction.r1] = Float.fromBits(registers[instruction.r1]).toInt()
             Opcode.CONVERT_INT_BOOLEAN -> if (registers[instruction.r1] != 0) registers[instruction.r1] = 1
@@ -245,12 +266,18 @@ class CPU(
             Opcode.INT_SUBTRACT -> registers[instruction.r1] -= instruction.immediateOr(immediateValue, registers[instruction.r2])
             Opcode.INT_MULTIPLY -> registers[instruction.r1] *= instruction.immediateOr(immediateValue, registers[instruction.r2])
             Opcode.INT_DIVIDE -> registers[instruction.r1] /= instruction.immediateOr(immediateValue, registers[instruction.r2])
+            Opcode.INT_MODULUS -> registers[instruction.r1] %= instruction.immediateOr(immediateValue, registers[instruction.r2])
+            Opcode.INT_MAX -> registers[instruction.r1] = max(registers[instruction.r1], instruction.immediateOr(immediateValue, registers[instruction.r2]))
             Opcode.INT_SIGN -> registers[instruction.r1] = -registers[instruction.r1]
+            Opcode.INT_ABSOLUTE -> registers[instruction.r1] = registers[instruction.r1].absoluteValue
             Opcode.FLOAT_ADD -> registers[instruction.r1] = (
                 Float.fromBits(registers[instruction.r1]) + Float.fromBits(instruction.immediateOr(immediateValue, registers[instruction.r2]))
             ).toRawBits()
             Opcode.FLOAT_MULTIPLY -> registers[instruction.r1] = (
                 Float.fromBits(registers[instruction.r1]) * Float.fromBits(instruction.immediateOr(immediateValue, registers[instruction.r2]))
+            ).toRawBits()
+            Opcode.FLOAT_DIVIDE -> registers[instruction.r1] = (
+                Float.fromBits(registers[instruction.r1]) / Float.fromBits(instruction.immediateOr(immediateValue, registers[instruction.r2]))
             ).toRawBits()
             Opcode.FLOAT_SIGN -> registers[instruction.r1] = registers[instruction.r1] xor 0x80000000.toInt()
             else -> {
@@ -266,9 +293,14 @@ class CPU(
                 println("Timer read stub")
                 if (localAddress == 2) frameCounter else 0 // TODO timer
             }
+            1 -> rng.controlRead(localAddress)
             2 -> gpu.controlRead(localAddress)
             3 -> {
                 println("SPU read stub")
+                0
+            }
+            4 -> {
+                println("Gamepad read stub")
                 0
             }
             5 -> cartridge.controlRead(localAddress)
@@ -287,8 +319,10 @@ class CPU(
 
         val localAddress = address and 0xFF
         when (val deviceID = (address shr 8) and 0b111) {
+            1 -> rng.controlWrite(localAddress, value)
             2 -> gpu.controlWrite(localAddress, value)
             3 -> println("SPU write stub")
+            4 -> println("Gamepad write stub")
             else -> TODO("Output not yet implemented: $deviceID")
         }
     }

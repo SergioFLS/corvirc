@@ -51,6 +51,7 @@ class Graphics(val biosTexture: Texture, val cartridge: Cartridge) : ControlDevi
     var drawingPointY: Int = 0
     var drawingScaleX: Int = 0 // TODO use
     var drawingScaleY: Int = 0 // TODO use
+    var drawingAngle: Float = 0F // TODO use
 
     val regions = Array(4096) { Region() }
     var regionMinX: Int
@@ -120,6 +121,7 @@ class Graphics(val biosTexture: Texture, val cartridge: Cartridge) : ControlDevi
             0x06 -> selectedRegion
             0x07 -> drawingPointX
             0x08 -> drawingPointY
+            0x0B -> drawingAngle.toRawBits()
             0x0C -> regionMinX
             0x0D -> regionMinY
             0x0E -> regionMaxX
@@ -159,6 +161,7 @@ class Graphics(val biosTexture: Texture, val cartridge: Cartridge) : ControlDevi
             0x08 -> drawingPointY = value
             0x09 -> drawingScaleX = value
             0x0A -> drawingScaleY = value
+            0x0B -> drawingAngle = Float.fromBits(value)
             0x0C -> regionMinX = value
             0x0D -> regionMinY = value
             0x0E -> regionMaxX = value
