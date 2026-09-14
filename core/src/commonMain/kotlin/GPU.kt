@@ -35,16 +35,18 @@ data class Region(
 
 const val SCREEN_WIDTH = 640
 const val SCREEN_HEIGHT = 360
-private const val TEXTURE_SIZE = 1024
 
-class Graphics : SlaveDevice {
+class Graphics(val biosTexture: Texture, val cartridge: Cartridge) : ControlDevice {
     val drawBuffer: IntArray = IntArray(SCREEN_WIDTH * SCREEN_HEIGHT) // in ABGR format
-    val texture = IntArray(TEXTURE_SIZE * TEXTURE_SIZE)
 
     var clearColor: Int = 0xFF000000.toInt()
     var multiplyColor: Int = 0xFFFFFFFF.toInt()
     var selectedTexture: Int = -1
+        set(value) { field = if (cartridge.initialized) value else -1 }
+    val texture: Texture
+        get() = if (selectedTexture <= -1) biosTexture else cartridge.textures!![selectedTexture]
     var selectedRegion: Int = 0
+        set(value) { if (value in 0 .. 4095) field = value }
     var drawingPointX: Int = 0
     var drawingPointY: Int = 0
     var drawingScaleX: Int = 0 // TODO use
@@ -69,18 +71,6 @@ class Graphics : SlaveDevice {
     var regionHotspotY: Int
         get() = regions[selectedRegion].hotspotY
         set(value) { regions[selectedRegion].hotspotY = value }
-
-    fun getTexturePixel(x: Int, y: Int): Int? {
-        if (x !in 0..<TEXTURE_SIZE) return null
-        if (y !in 0..<TEXTURE_SIZE) return null
-        return texture[y * TEXTURE_SIZE + x]
-    }
-
-    fun setTexturePixel(x: Int, y: Int, color: Int) {
-        if (x !in 0..<TEXTURE_SIZE) return
-        if (y !in 0..<TEXTURE_SIZE) return
-        texture[y * TEXTURE_SIZE + x] = color
-    }
 
     fun getPixel(x: Int, y: Int): Int? {
         if (x !in 0..<SCREEN_WIDTH) return null
@@ -115,14 +105,14 @@ class Graphics : SlaveDevice {
     fun drawRegion() {
         for (y in regionMinY .. regionMaxY) {
             for (x in regionMinX .. regionMaxX) {
-                val pixel = getTexturePixel(x, y) ?: 0
+                val pixel = texture.getPixel(x, y) ?: 0
                 if (pixel == 0) continue
                 putPixel(x + drawingPointX - regionHotspotX, y + drawingPointY - regionHotspotY, pixel)
             }
         }
     }
 
-    override fun read(address: Int): Int {
+    override fun controlRead(address: Int): Int {
         return when (address) {
             0x02 -> clearColor
             0x03 -> multiplyColor
@@ -140,7 +130,7 @@ class Graphics : SlaveDevice {
         }
     }
 
-    override fun write(address: Int, value: Int) {
+    override fun controlWrite(address: Int, value: Int) {
         when (address) {
             0x00 -> {
                 when (value) {

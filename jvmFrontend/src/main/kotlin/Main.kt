@@ -1,15 +1,10 @@
 // SPDX-FileCopyrightText: 2026 SergOneZero
 // SPDX-License-Identifier: MIT-0 OR Apache-2.0
 import invalid.sergonezero.corvirc.CPU
+import invalid.sergonezero.corvirc.Cartridge
 import invalid.sergonezero.corvirc.Graphics
 import invalid.sergonezero.corvirc.SCREEN_HEIGHT
 import invalid.sergonezero.corvirc.SCREEN_WIDTH
-import kotlinx.io.asSource
-import kotlinx.io.buffered
-import kotlinx.io.bytestring.decodeToString
-import kotlinx.io.readByteString
-import kotlinx.io.readIntLe
-import kotlinx.io.readUIntLe
 import java.awt.Dimension
 import java.awt.Graphics2D
 import java.awt.Image
@@ -28,30 +23,11 @@ object Dummy {
 }
 
 fun main() {
-    val cartV32 = Dummy.getResourceAsStream("/StandardBios.v32")!!
-    val g = Graphics()
-    val cpu: CPU
-    cartV32.asSource().buffered().use {
-        it.skip(0x80)
-        require(it.readByteString(8).decodeToString() == "V32-VBIN")
-        val wordSize = it.readIntLe()
-        val program = IntArray(wordSize)
-        for (i in program.indices) {
-            program[i] = it.readIntLe()
-        }
-        cpu = CPU(program, g)
+    val bios = Cartridge(Dummy.getResourceAsStream("/StandardBios.v32")!!.readBytes())
+    val cart = Cartridge()
 
-        //it.skip(0x314 - 0x80)
-        require(it.readByteString(8).decodeToString() == "V32-VTEX")
-        val textureWidth = it.readUIntLe()
-        val textureHeight = it.readUIntLe()
-        println("Texture width: $textureWidth height: $textureHeight")
-        for (y in 0 ..<textureHeight.toInt()) {
-            for (x in 0 ..<textureWidth.toInt()) {
-                g.setTexturePixel(x, y, it.readIntLe())
-            }
-        }
-    }
+    val g = Graphics(bios.textures!![0], cart)
+    val cpu = CPU(bios, cart, g)
 
     fun runCPUFrame() {
         cpu.runUntilHaltOrWait()

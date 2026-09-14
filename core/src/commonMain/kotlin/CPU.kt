@@ -112,7 +112,8 @@ data class Instruction(
 const val STACK_POINTER = 15
 
 class CPU(
-    val program: IntArray,
+    val bios: Cartridge,
+    val cartridge: Cartridge,
     val gpu: Graphics
 ) {
     var instructionPointer: Int = 0x20000000
@@ -143,8 +144,8 @@ class CPU(
 
         return when (addr and 0x30000000) {
             0 -> memory[addr]
-            0x10000000 -> program[addr - 0x10000000]
-            //0x20000000 -> program[addr - 0x20000000]
+            0x10000000 -> bios.memoryRead(address - 0x10000000)
+            0x20000000 -> cartridge.memoryRead(address - 0x20000000)
             else -> TODO("unfinished memory map")
         }
     }
@@ -155,7 +156,7 @@ class CPU(
 
         when (addr and 0x30000000) {
             0 -> memory[addr] = value
-            //0x20000000 -> program[addr - 0x20000000] = value
+            0x20000000 -> cartridge.memoryWrite(address - 0x20000000, value)
             else -> TODO("unfinished memory map")
         }
     }
@@ -265,15 +266,12 @@ class CPU(
                 println("Timer read stub")
                 if (localAddress == 2) frameCounter else 0 // TODO timer
             }
-            2 -> gpu.read(localAddress)
+            2 -> gpu.controlRead(localAddress)
             3 -> {
                 println("SPU read stub")
                 0
             }
-            5 -> {
-                println("Cartridge read stub")
-                0
-            }
+            5 -> cartridge.controlRead(localAddress)
             else -> TODO("Input not yet implemented: $deviceID")
         }
     }
@@ -289,7 +287,7 @@ class CPU(
 
         val localAddress = address and 0xFF
         when (val deviceID = (address shr 8) and 0b111) {
-            2 -> gpu.write(localAddress, value)
+            2 -> gpu.controlWrite(localAddress, value)
             3 -> println("SPU write stub")
             else -> TODO("Output not yet implemented: $deviceID")
         }

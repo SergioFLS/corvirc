@@ -46,7 +46,7 @@ suspend fun main() {
     check(cartRequest.ok)
 
     val cartV32 = DataView(cartRequest.arrayBuffer())
-    val g = Graphics()
+    val g = Graphics(bios.textures!![0], cart.textures!!)
     val cpu = CPU(getProgram(cartV32), g)
     console.log(cpu.program)
     loadTexture(g, cartV32)
